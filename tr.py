@@ -52,11 +52,27 @@ def preprocess_data(data, tokenizer):
 class EMGTransformer(nn.Module):
     def __init__(self):
         super().__init__()
-        # Define Transformer layers here
+        self.embedding = nn.Embedding(64, 64)  # Embedding layer to transform input IDs into feature vectors
+        self.transformer = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(
+                d_model=64,
+                nhead=8,
+                dim_feedforward=256,
+                dropout=0.2
+            ),
+            num_layers=2
+        )
+        self.fc = nn.Linear(64, 2)  # Fully connected layer for classification
         
-    def forward(self, x):
-        # Forward pass through Transformer layers
+    def forward(self, input_ids, attention_mask):
+        x = self.embedding(input_ids)  # Apply embedding layer
+        x = x.permute(1, 0, 2)  # Reshape input for transformer
+        mask = attention_mask.permute(1, 0)  # Reshape mask for transformer
+        x = self.transformer(x, src_key_padding_mask=mask)  # Apply transformer
+        x = x[-1, :, :]  # Select the last output token as the representation of the entire sequence
+        x = self.fc(x)  # Apply fully connected layer for classification
         return x
+
 
 model = EMGTransformer()
 
