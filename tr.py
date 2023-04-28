@@ -2,6 +2,15 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import pandas as pd
+import tensorflow as tf
+import os
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from transformers import AutoTokenizer
+from torch.utils.data import DataLoader, TensorDataset
 
 # Load data
 def load_data(patient, file_numbers=[1, 3, 4, 7, 8]):
@@ -35,7 +44,8 @@ def preprocess_data(data, tokenizer):
                             str(sample),
                             add_special_tokens = True,
                             max_length = 64,
-                            pad_to_max_length = True,
+                            padding = 'max_length',
+                            truncation = True,
                             return_attention_mask = True,
                             return_tensors = 'tf',
                        )
@@ -47,6 +57,21 @@ def preprocess_data(data, tokenizer):
     attention_masks = tf.convert_to_tensor(attention_masks)
     
     return input_ids, attention_masks, y
+
+# Step 1: Load tokenizer
+tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
+
+# Step 2: Load and preprocess data
+train_data = pd.concat([load_data(patient, train_files) for patient in train_patients], ignore_index=True)
+test_data = pd.concat([load_data(patient, test_files) for patient in test_patients], ignore_index=True)
+
+train_input_ids, train_attention_masks, train_labels = preprocess_data(train_data, tokenizer)
+test_input_ids, test_attention_masks, test_labels = preprocess_data(test_data, tokenizer)
+train_dataset = TensorDataset(train_input_ids, train_attention_masks, train_labels)
+batch_size = 32
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+# train_dataset = tf.data.Dataset.from_tensor_slices((train_input_ids, train_attention_masks, train_labels))
+train_dataset = train_dataset.shuffle(len(train_input_ids)).batch(32)
 
 # Step 3: Define model
 class EMGTransformer(nn.Module):
