@@ -10,10 +10,18 @@ from sklearn.impute import IterativeImputer
 # Load data
 def load_data(patient, file_numbers=[1, 3, 4, 7, 8]):
     dfs = [pd.read_csv(f'/home/myhand/Downloads/data/p{patient}/p{patient}_{i}.csv') for i in file_numbers]
+    for i, df in enumerate(dfs):
+        print(f"File {file_numbers[i]} shape: {df.shape}")
     data = pd.concat(dfs, ignore_index=True)
     selected_columns = ['emg0', 'emg1', 'emg2', 'emg3', 'emg4', 'emg5','emg6', 'emg7']
-    data = data[selected_columns + ['label']]
+    data = data[selected_columns]
     return data
+
+train_patients = [1, 3, 4, 7, 8]
+test_patients = [1, 3, 4, 7, 8]
+
+train_files = ['111', '121', '131', '141']
+test_files = ['112', '122', '132', '142']
 
 # Preprocessing data
 def preprocess_data(data, past_time_steps=0):
@@ -24,10 +32,10 @@ def preprocess_data(data, past_time_steps=0):
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X_imputed)
     X_final = X_scaled
-    if past_time_steps > 0:
-        X_padded = np.pad(X_final, ((past_time_steps, 0), (0, 0)), 'constant')
-        for i in range(past_time_steps):
-            X_final = np.concatenate([X_final, X_padded[i:i-X_final.shape[0]]], axis=1)
+    # if past_time_steps > 0:
+    #     X_padded = np.pad(X_final, ((past_time_steps, 0), (0, 0)), 'constant')
+    #     for i in range(past_time_steps, 0, -1):
+    #         X_final = np.concatenate([X_final, X_padded[i:i-X_final.shape[0]:-1]], axis=1)
     return X_final, y
 
 # Select RF parameters with cross validation
